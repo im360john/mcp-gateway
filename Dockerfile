@@ -23,8 +23,8 @@ ENV BASE_PATH=/
 ENV WEB_ROOT=/app/web
 ENV HEALTH_CHECK_PATH=/api/health
 
-# Modify Nginx configuration to use IPv4 only
-RUN sed -i 's/listen\s*\[\:\:1\]/listen 127.0.0.1/g' /etc/nginx/conf.d/default.conf && \
+# Create a simple Nginx configuration for IPv4 only
+RUN echo "server { listen 127.0.0.1:5234; }" > /etc/nginx/conf.d/ipv4.conf && \
     echo "resolver 127.0.0.11 ipv6=off;" > /etc/nginx/conf.d/resolver.conf
 
 # Create a health check endpoint
