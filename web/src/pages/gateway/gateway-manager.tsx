@@ -1,16 +1,50 @@
-import { Card, CardBody, Button, ModalContent, ModalHeader, ModalBody, ModalFooter, useDisclosure, Chip, Dropdown, DropdownTrigger, DropdownMenu, DropdownItem, Autocomplete, AutocompleteItem, Tabs, Tab, Table, TableHeader, TableColumn, TableBody, TableRow, TableCell, Modal, Snippet } from "@heroui/react";
-import { Icon } from '@iconify/react';
+import {
+  Autocomplete,
+  AutocompleteItem,
+  Button,
+  Card,
+  CardBody,
+  Chip,
+  Dropdown,
+  DropdownItem,
+  DropdownMenu,
+  DropdownTrigger,
+  Modal,
+  ModalBody,
+  ModalContent,
+  ModalFooter,
+  ModalHeader,
+  Tab,
+  Table,
+  TableBody,
+  TableCell,
+  TableColumn,
+  TableHeader,
+  TableRow,
+  Tabs,
+  useDisclosure
+} from "@heroui/react";
+import {Icon} from '@iconify/react';
 import copy from 'copy-to-clipboard';
 import yaml from 'js-yaml';
-import { configureMonacoYaml } from 'monaco-yaml';
+import {configureMonacoYaml} from 'monaco-yaml';
 import React from 'react';
-import { useTranslation } from 'react-i18next';
+import {useTranslation} from 'react-i18next';
 
-import { getMCPServers, createMCPServer, updateMCPServer, deleteMCPServer, exportMCPServer, syncMCPServers, getUserAuthorizedTenants, getTenant } from '../../services/api';
-import type { Gateway } from '../../types/gateway';
-import { toast } from '../../utils/toast';
+import {
+  createMCPServer,
+  deleteMCPServer,
+  exportMCPServer,
+  getMCPServers,
+  getTenant,
+  getUserAuthorizedTenants,
+  syncMCPServers,
+  updateMCPServer
+} from '../../services/api';
+import type {Gateway} from '../../types/gateway';
+import {toast} from '../../utils/toast';
 
-import { ConfigEditor } from './components/ConfigEditor';
+import {ConfigEditor} from './components/ConfigEditor';
 import OpenAPIImport from './components/OpenAPIImport';
 
 declare global {
@@ -29,7 +63,6 @@ declare global {
 
 interface ServerConfig {
   name: string;
-  namespace: string;
   description: string;
   allowedTools: string[];
 }
@@ -51,6 +84,14 @@ interface Tenant {
   prefix: string;
   description: string;
   isActive: boolean;
+}
+
+interface YAMLConfig {
+  mcpServers?: Record<string, unknown>;
+  tools?: Record<string, unknown>;
+  servers?: Record<string, unknown>;
+  routers?: Record<string, unknown>;
+  [key: string]: unknown;
 }
 
 export function GatewayManager() {
@@ -76,6 +117,7 @@ export function GatewayManager() {
   const [currentModalServer, setCurrentModalServer] = React.useState<Gateway | null>(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = React.useState(false);
   const [serverToDelete, setServerToDelete] = React.useState<Gateway | null>(null);
+  const [copiedStates, setCopiedStates] = React.useState<{ [key: string]: boolean }>({});
 
   // Listen for theme changes
   React.useEffect(() => {
@@ -209,17 +251,28 @@ export function GatewayManager() {
 
   const handleSave = async () => {
     try {
-      // Validate YAML
-      yaml.load(editConfig);
+      // Parse YAML to check format and handle null values
+      const parsedConfig = yaml.load(editConfig) as YAMLConfig;
+      
+      // Remove null fields from the config
+      const fieldsToCheck = ['mcpServers', 'tools', 'servers', 'routers'];
+      fieldsToCheck.forEach(field => {
+        if (parsedConfig[field] === null) {
+          delete parsedConfig[field];
+        }
+      });
+
+      // Convert back to YAML string
+      const cleanedConfig = yaml.dump(parsedConfig);
 
       // Validate router prefix
-      const isValidPrefix = await validateRouterPrefixes(editConfig);
+      const isValidPrefix = await validateRouterPrefixes(cleanedConfig);
       if (!isValidPrefix) {
         return;
       }
 
       if (currentMCPServer) {
-        await updateMCPServer(currentMCPServer.name, editConfig);
+        await updateMCPServer(currentMCPServer.name, cleanedConfig);
         const tenantId = selectedTenants.length > 0 ? selectedTenants[0].id : undefined;
         const servers = await getMCPServers(tenantId);
         setMCPServers(servers);
@@ -293,22 +346,28 @@ export function GatewayManager() {
 
   const handleCreate = async () => {
     try {
-      // Validate YAML format first
-      try {
-        yaml.load(newConfig);
-      } catch {
-        toast.error(t('errors.invalid_yaml'));
-        return;
-      }
+      // Parse YAML to check format and handle null values
+      const parsedConfig = yaml.load(newConfig) as YAMLConfig;
+      
+      // Remove null fields from the config
+      const fieldsToCheck = ['mcpServers', 'tools', 'servers', 'routers'];
+      fieldsToCheck.forEach(field => {
+        if (parsedConfig[field] === null) {
+          delete parsedConfig[field];
+        }
+      });
+
+      // Convert back to YAML string
+      const cleanedConfig = yaml.dump(parsedConfig);
 
       // Validate router prefix
-      const isValidPrefix = await validateRouterPrefixes(newConfig);
+      const isValidPrefix = await validateRouterPrefixes(cleanedConfig);
       if (!isValidPrefix) {
         return;
       }
 
       // If YAML is valid, proceed with creation
-      await createMCPServer(newConfig);
+      await createMCPServer(cleanedConfig);
       const tenantId = selectedTenants.length > 0 ? selectedTenants[0].id : undefined;
       const servers = await getMCPServers(tenantId);
       setMCPServers(servers);
@@ -406,6 +465,14 @@ export function GatewayManager() {
       !selectedTenants.some(selected => selected.id === tenant.id)
     );
   }, [tenants, selectedTenants]);
+
+  const handleCopyWithIcon = (text: string, key: string) => {
+    handleCopyToClipboard(text);
+    setCopiedStates(prev => ({ ...prev, [key]: true }));
+    window.setTimeout(() => {
+      setCopiedStates(prev => ({ ...prev, [key]: false }));
+    }, 1000);
+  };
 
   return (
     <div className="container mx-auto p-4 pb-10 h-[calc(100vh-5rem)] flex flex-col overflow-y-scroll scrollbar-hide">
@@ -648,39 +715,36 @@ export function GatewayManager() {
                             <div className="space-y-2">
                               <h4 className="text-sm font-semibold">{t('gateway.backend_config')}</h4>
                               <div className="flex flex-col gap-2">
-                                <Snippet
+                                <Chip
                                   color="primary"
                                   variant="flat"
                                   size="sm"
-                                  className="cursor-pointer hover:opacity-80 select-none"
+                                  className="cursor-pointer hover:opacity-80 select-none pr-2"
                                   onClick={() => {
                                     const baseUrl = window.location.origin;
                                     const sseUrl = `${baseUrl}/mcp/user/sse`;
-                                    handleCopyToClipboard(sseUrl);
+                                    handleCopyWithIcon(sseUrl, `sse-${server.name}`);
                                   }}
-                                  onCopy={() => {
-                                    const baseUrl = window.location.origin;
-                                    const sseUrl = `${baseUrl}/mcp/user/sse`;
-                                    handleCopyToClipboard(sseUrl);
-                                  }}
+                                  endContent={<Icon icon={copiedStates[`sse-${server.name}`] ? "lucide:check" : "lucide:copy"} className="text-sm" />}
                                   aria-label={`${t('common.copy')} ${t('gateway.sse_url')}`}
                                 >
                                   {t('gateway.sse_url')}
-                                </Snippet>
-                                <Snippet
+                                </Chip>
+                                <Chip
                                   color="primary"
                                   variant="flat"
                                   size="sm"
-                                  className="cursor-pointer hover:opacity-80 select-none"
-                                  onCopy={() => {
+                                  className="cursor-pointer hover:opacity-80 select-none pr-2"
+                                  onClick={() => {
                                     const baseUrl = window.location.origin;
                                     const streamableUrl = `${baseUrl}/mcp/user/mcp`;
-                                    handleCopyToClipboard(streamableUrl);
+                                    handleCopyWithIcon(streamableUrl, `streamable-${server.name}`);
                                   }}
+                                  endContent={<Icon icon={copiedStates[`streamable-${server.name}`] ? "lucide:check" : "lucide:copy"} className="text-sm" />}
                                   aria-label={`${t('common.copy')} ${t('gateway.streamable_http_url')}`}
                                 >
                                   {t('gateway.streamable_http_url')}
-                                </Snippet>
+                                </Chip>
                               </div>
                             </div>
 
@@ -808,6 +872,43 @@ export function GatewayManager() {
                               </div>
                             </div>
                           )}
+
+                          {/* Add SSE URL and Streamable HTTP URL tags */}
+                          <div className="space-y-2">
+                            <h4 className="text-sm font-semibold">{t('gateway.backend_config')}</h4>
+                            <div className="flex flex-col gap-2">
+                              <Chip
+                                color="primary"
+                                variant="flat"
+                                size="sm"
+                                className="cursor-pointer hover:opacity-80 select-none pr-2"
+                                onClick={() => {
+                                  const baseUrl = window.location.origin;
+                                  const sseUrl = `${baseUrl}/mcp/user/sse`;
+                                  handleCopyWithIcon(sseUrl, `sse-${server.name}`);
+                                }}
+                                endContent={<Icon icon={copiedStates[`sse-${server.name}`] ? "lucide:check" : "lucide:copy"} className="text-sm" />}
+                                aria-label={`${t('common.copy')} ${t('gateway.sse_url')}`}
+                              >
+                                {t('gateway.sse_url')}
+                              </Chip>
+                              <Chip
+                                color="primary"
+                                variant="flat"
+                                size="sm"
+                                className="cursor-pointer hover:opacity-80 select-none pr-2"
+                                onClick={() => {
+                                  const baseUrl = window.location.origin;
+                                  const streamableUrl = `${baseUrl}/mcp/user/mcp`;
+                                  handleCopyWithIcon(streamableUrl, `streamable-${server.name}`);
+                                }}
+                                endContent={<Icon icon={copiedStates[`streamable-${server.name}`] ? "lucide:check" : "lucide:copy"} className="text-sm" />}
+                                aria-label={`${t('common.copy')} ${t('gateway.streamable_http_url')}`}
+                              >
+                                {t('gateway.streamable_http_url')}
+                              </Chip>
+                            </div>
+                          </div>
 
                           {server.parsedConfig.mcpServers && server.parsedConfig.mcpServers.length > 0 && (
                             <div className="space-y-2">

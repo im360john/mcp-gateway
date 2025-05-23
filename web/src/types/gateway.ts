@@ -9,7 +9,6 @@ export interface Gateway {
     }>;
     servers: Array<{
       name: string;
-      namespace: string;
       description: string;
       allowedTools: string[];
     }>;

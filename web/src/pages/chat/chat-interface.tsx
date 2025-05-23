@@ -1,21 +1,21 @@
-import { Card, CardBody, Button, Input, Select, SelectItem, Divider, Tabs, Tab } from '@heroui/react';
-import { Icon } from '@iconify/react';
+import {Button, Card, CardBody, Divider, Input, Select, SelectItem, Tab, Tabs} from '@heroui/react';
+import {Icon} from '@iconify/react';
 import yaml from 'js-yaml';
 import React from 'react';
-import { useTranslation } from 'react-i18next';
-import { useNavigate, useParams } from 'react-router-dom';
-import { v4 as uuidv4 } from 'uuid';
+import {useTranslation} from 'react-i18next';
+import {useNavigate, useParams} from 'react-router-dom';
+import {v4 as uuidv4} from 'uuid';
 
-import { getChatMessages, getMCPServers } from '../../services/api';
-import { mcpService } from '../../services/mcp';
-import { wsService, WebSocketMessage } from '../../services/websocket';
-import { Tool } from '../../types/mcp';
+import {getChatMessages, getMCPServers} from '../../services/api';
+import {mcpService} from '../../services/mcp';
+import {WebSocketMessage, wsService} from '../../services/websocket';
+import {Tool} from '../../types/mcp';
 import {Message as MessageType, ToolCall, ToolResult} from '../../types/message';
-import { toast } from '../../utils/toast';
+import {toast} from '../../utils/toast';
 
-import { ChatProvider } from './chat-context';
-import { ChatHistory } from './components/chat-history';
-import { ChatMessage } from './components/chat-message';
+import {ChatProvider} from './chat-context';
+import {ChatHistory} from './components/chat-history';
+import {ChatMessage} from './components/chat-message';
 
 interface BackendMessage {
   id: string;
@@ -36,7 +36,6 @@ interface Gateway {
     }>;
     servers: Array<{
       name: string;
-      namespace: string;
       description: string;
       allowedTools: string[];
     }>;

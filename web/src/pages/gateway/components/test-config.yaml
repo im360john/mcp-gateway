@@ -22,7 +22,6 @@ routers:
 
 servers:
   - name: "mock-server"
-    namespace: "user-service"
     description: "Mock User Service"
     allowedTools:
       - "register_user"

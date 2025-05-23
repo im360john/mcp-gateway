@@ -49,7 +49,6 @@ type Tool struct {
 // StoredServer represents a server in storage
 type StoredServer struct {
 	Name           string    `json:"name"`
-	Namespace      string    `json:"namespace"`
 	Description    string    `json:"description"`
 	Auth           Auth      `json:"auth"`
 	AllowedTools   []string  `json:"allowedTools"`

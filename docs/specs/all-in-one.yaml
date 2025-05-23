@@ -6,7 +6,6 @@ routers:
 
 servers:
   - name: "restapi-user"                                                      # 服务唯一标识
-    namespace: "user-service"                                                 # 服务逻辑命名空间
     description: "用户服务"                                                    # 服务描述
     auth:
       mode: "bearer"                                                          # 认证方式：bearer / apikey / none
@@ -19,7 +18,6 @@ servers:
       - "https://security.example.com"                                        # 跨域允许的 origin（用于 CORS）
 
   - name: "restapi-map"
-    namespace: "map-service"
     description: "地图服务"
     auth:
       mode: "apikey"
