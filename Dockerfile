@@ -5,5 +5,3 @@ COPY start.sh /start.sh
 RUN chmod +x /start.sh
 
 EXPOSE $PORT
-
-CMD ["start.sh"]
