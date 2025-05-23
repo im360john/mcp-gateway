@@ -1,8 +1,8 @@
 FROM ghcr.io/mcp-ecosystem/mcp-gateway/allinone:latest
 
 # Create a startup script that handles port conflicts
-COPY start.sh /start.sh
-RUN chmod +x /start.sh
+COPY start.sh /app/mcp-gateway/start.sh
+RUN chmod +x /app/mcp-gateway/start.sh
 
 EXPOSE $PORT
 
