@@ -6,4 +6,4 @@ RUN chmod +x /app/mcp-gateway/start.sh
 
 EXPOSE $PORT
 
-CMD ["/start.sh"]
+CMD ["/app/mcp-gateway/start.sh"]
